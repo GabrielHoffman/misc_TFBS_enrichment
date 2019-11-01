@@ -61,30 +61,25 @@ result = lapply( names(count_TF_overlaps), function(tf){
 	# get p-value based on permuations
 	p.perm = sum(rnd_tf_matrix[,tf] > count_TF_overlaps[tf]) / nrow(rnd_tf_matrix) 
 
-	# compute enrichment and standard error
-	# A = count_TF_overlaps[tf] + pseudocount
-	# B = rnd_tf_matrix[,tf] + pseudocount
+	# compute enrichment
+	tab = c(count_TF_overlaps[tf], 
+			length(epimapPeaks), 
+			median(rnd_tf_matrix[,tf]),		
+			length(epimapPeaks)	)
+	tab = matrix(tab,2,2)
+	fit = fisher.test(tab)
 
-	# mu = log2( A / median(B) )
-	# se = sd(log2(A / B))
-
-	# p.value = pnorm(mu / se, lower.tail=FALSE)
-
-	data.frame( TF=tf, 
-				log2Enrichment = mu,
-				se = se,
-				p.value = p.value,
-				p.perm)
-
-	pnorm( count_TF_overlaps[tf], mean(rnd_tf_matrix[,tf]), sd=sd(rnd_tf_matrix[,tf]), lower.tail=FALSE )
+	# pnorm( count_TF_overlaps[tf], mean(rnd_tf_matrix[,tf]), sd=sd(rnd_tf_matrix[,tf]), lower.tail=FALSE )
 	zscore = (count_TF_overlaps[tf] - mean(rnd_tf_matrix[,tf])) / sd(rnd_tf_matrix[,tf])
-
-	p.value = pnorm(zscore, lower.tail=FALSE)
-
-	data.frame( TF=tf,
-			zscore,
-			p.value,
-			p.perm)
+	
+	data.frame( TF=tf, 
+				log2OR = log2(fit$estimate),
+				ci.lower = log2(fit$conf.int[1]),
+				ci.upper = log2(fit$conf.int[2]),
+				p.value = fit$p.value,
+				p.perm,
+				zscore = zscore,
+				p.zscore = pnorm(zscore, lower.tail=FALSE))
 })
 result = do.call("rbind", result)
 rownames(result) = c()
@@ -93,9 +88,12 @@ result
 
 library(ggplot2)
 
-ggplot(result, aes(TF,zscore)) + geom_point() + coord_flip() + theme_bw() + geom_vline(xintercept=0)
+# plot log2 OR
+ggplot(result, aes(TF,log2OR)) + geom_errorbar(aes(ymin = ci.lower, ymax = ci.upper), color="grey40") + geom_point() + coord_flip() + theme_bw() + geom_hline(yintercept=0) 
 
 
+# plot zscores
+# ggplot(result, aes(TF,zscore)) + geom_point() + coord_flip() + theme_bw() + geom_vline(xintercept=0)
 
 
 
