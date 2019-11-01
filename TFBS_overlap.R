@@ -2,8 +2,8 @@
 
 # Compute TFBS enrichment and p-values
 
-
-ml openssl
+# in bash
+# ml openssl
 
 library(GenomicRanges)
 library(data.table)
